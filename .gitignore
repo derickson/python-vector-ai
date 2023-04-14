@@ -1,3 +1,4 @@
 env
 run.sh
 data
+__pycache__

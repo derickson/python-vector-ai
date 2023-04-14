@@ -1,20 +1,16 @@
 import os
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import TextLoader
+import lib_book_parse
+import lib_llm
+
 
 ## for vector store
 from langchain.vectorstores import ElasticVectorSearch
-from elasticsearch import Elasticsearch
 
 ## for embeddings
 from langchain.embeddings import HuggingFaceEmbeddings
 
-## for conversation LLM
-from langchain import PromptTemplate, HuggingFaceHub, LLMChain
-from langchain.llms import HuggingFacePipeline
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, AutoModelForSeq2SeqLM
+
 
 
 config = {
@@ -36,48 +32,13 @@ username = os.getenv('ES_USERNAME', 'ERROR')
 password = os.getenv('ES_PASSWORD', 'ERROR')
 index_name = config['bookIndexName']
 url = f"https://{username}:{password}@{endpoint}:443"
-es = Elasticsearch([url], verify_certs=True)
+
 db = ElasticVectorSearch(embedding=hf, elasticsearch_url=url, index_name=index_name)
 
-# Get Offline flan-t5-large ready to go, in CPU mode
-print(">> Prep. Get Offline flan-t5-large ready to go, in CPU mode")
-model_id = 'google/flan-t5-large'# go for a smaller model if you dont have the VRAM
-tokenizer = AutoTokenizer.from_pretrained(model_id) 
-model = AutoModelForSeq2SeqLM.from_pretrained(model_id) #load_in_8bit=True, device_map='auto'
-pipe = pipeline(
-    "text2text-generation",
-    model=model, 
-    tokenizer=tokenizer, 
-    max_length=100
-)
-local_llm = HuggingFacePipeline(pipeline=pipe)
-template_informed = """
-I know the following: {context}
-Question: {question}
-Answer: """
-prompt_informed = PromptTemplate(template=template_informed, input_variables=["context", "question"])
-llm_chain_informed= LLMChain(prompt=prompt_informed, llm=local_llm)
+llm_chain_informed= lib_llm.make_the_llm()
 
+lib_book_parse.loadBook(config['bookFilePath'],url,db,index_name)
 
-
-
-## Parse the book if necessary
-if not es.indices.exists(index=index_name):
-    print(f'\tThe index: {index_name} does not exist')
-    print(">> 1. Chunk up the Source document")
-    loader = TextLoader(config['bookFilePath'])
-    documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=20)
-    docs = text_splitter.split_documents(documents)
-    # for doc in docs:
-    #     content = doc.page_content
-    #     mylen = len(content)
-    #     print(mylen)
-    #     print(content)
-    print(">> 2. Index the chunks into Elasticsearch")
-    db.from_documents(docs, embedding=hf, elasticsearch_url=url, index_name=index_name)
-else:
-    print("\tLooks like the book is already loaded, let's move on")
 
 
 def ask_a_question(question):
