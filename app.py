@@ -1,15 +1,8 @@
-import os
 
 import lib_book_parse
 import lib_llm
-
-
-## for vector store
-from langchain.vectorstores import ElasticVectorSearch
-
-## for embeddings
-from langchain.embeddings import HuggingFaceEmbeddings
-
+import lib_embeddings
+import lib_vectordb
 
 
 
@@ -19,28 +12,23 @@ config = {
     "bookFilePath": "./data/lotr-utf8.txt"
 }
 
+bookName = config['bookName']
+bookFilePath = config['bookFilePath']
+index_name = config['bookIndexName']
 
 # Huggingface embedding setup
-print(">> Prep. Huggingface embedding setup")
-model_name = "sentence-transformers/all-mpnet-base-v2"
-hf = HuggingFaceEmbeddings(model_name=model_name)
+hf = lib_embeddings.setup_embeddings()
 
-# Elasticsearch URL setup
-print(">> Prep. Elasticsearch config setup")
-endpoint = os.getenv('ES_SERVER', 'ERROR') 
-username = os.getenv('ES_USERNAME', 'ERROR') 
-password = os.getenv('ES_PASSWORD', 'ERROR')
-index_name = config['bookIndexName']
-url = f"https://{username}:{password}@{endpoint}:443"
+## Elasticsearch as a vector db
+db, url = lib_vectordb.setup_vectordb(hf,index_name)
 
-db = ElasticVectorSearch(embedding=hf, elasticsearch_url=url, index_name=index_name)
-
+## set up the conversational LLM
 llm_chain_informed= lib_llm.make_the_llm()
 
-lib_book_parse.loadBook(config['bookFilePath'],url,hf,db,index_name)
+## Load the book
+lib_book_parse.loadBook(bookFilePath,url,hf,db,index_name)
 
-
-
+## how to ask a question
 def ask_a_question(question):
     print("The Question at hand: "+question)
 
@@ -56,9 +44,8 @@ def ask_a_question(question):
     return response
 
 
+# The conversational loop
 
-# Listen for commands
-bookName = config['bookName']
 print(f'I am the book, "{bookName}", ask me any question: ')
 
 while True:
