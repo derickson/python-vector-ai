@@ -37,7 +37,7 @@ db = ElasticVectorSearch(embedding=hf, elasticsearch_url=url, index_name=index_n
 
 llm_chain_informed= lib_llm.make_the_llm()
 
-lib_book_parse.loadBook(config['bookFilePath'],url,db,index_name)
+lib_book_parse.loadBook(config['bookFilePath'],url,hf,db,index_name)
 
 
 
