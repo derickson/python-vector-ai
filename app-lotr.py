@@ -4,6 +4,8 @@ import lib_llm
 import lib_embeddings
 import lib_vectordb
 
+import lib_speak
+
 
 
 config = {
@@ -46,10 +48,10 @@ def ask_a_question(question):
 
 # The conversational loop
 
-print(f'I am the book, "{bookName}", ask me any question: ')
+lib_speak.speak(f'I am the book, "{bookName}", ask me any question: ')
 
 while True:
     command = input("User Question>> ")
     response = ask_a_question(command)
-    print(f"\n\n I think the answer is : {response}\n")
+    lib_speak.speak(f"\n\n I think the answer is : {response}\n")
 

@@ -22,7 +22,7 @@ export ES_SERVER="YOURDESSERVERNAME.es.us-central1.gcp.cloud.es.io"
 export ES_USERNAME="YOUR READ WRITE AND INDEX CREATING USER"
 export ES_PASSWORD="YOUR PASSWORD"
 
-python3 app.py
+python3 app-lotr.py
 ```
 
 run that script

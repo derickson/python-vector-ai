@@ -18,10 +18,16 @@ def make_the_llm():
         max_length=100
     )
     local_llm = HuggingFacePipeline(pipeline=pipe)
+    # template_informed = """
+    # I know the following: {context}
+    # Question: {question}
+    # Answer: """
+
     template_informed = """
-    I know the following: {context}
-    Question: {question}
-    Answer: """
+    I know: {context}
+    when asked: {question}
+    my response is: """
+
     prompt_informed = PromptTemplate(template=template_informed, input_variables=["context", "question"])
 
     return LLMChain(prompt=prompt_informed, llm=local_llm)
