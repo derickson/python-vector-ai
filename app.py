@@ -1,3 +1,5 @@
+import os
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import TextLoader
 
@@ -29,9 +31,9 @@ hf = HuggingFaceEmbeddings(model_name=model_name)
 
 # Elasticsearch URL setup
 print(">> Prep. Elasticsearch config setup")
-endpoint = "searchdev.es.us-central1.gcp.cloud.es.io"
-username = "test"
-password = "test123"
+endpoint = os.getenv('ES_SERVER', 'ERROR') 
+username = os.getenv('ES_USERNAME', 'ERROR') 
+password = os.getenv('ES_PASSWORD', 'ERROR')
 index_name = config['bookIndexName']
 url = f"https://{username}:{password}@{endpoint}:443"
 es = Elasticsearch([url], verify_certs=True)
