@@ -7,7 +7,7 @@ from elasticsearch import Elasticsearch
 def parse_book(filepath):
     loader = TextLoader(filepath)
     documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=64)
     docs = text_splitter.split_documents(documents)
     return docs
 
@@ -57,7 +57,9 @@ def loadBookBig(filepath, url, hf, db, index_name):
 
             print(">> 2. Index the chunks into Elasticsearch")
             
-            db.from_texts(docs, embedding=hf, elasticsearch_url=url, index_name=index_name)
+            # list_of_strings = [str(d) for d in docs]
+
+            db.from_documents(docs, embedding=hf, elasticsearch_url=url, index_name=index_name)
         else:
             print("\tLooks like the book is already loaded, let's move on")
 
