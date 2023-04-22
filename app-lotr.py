@@ -55,5 +55,6 @@ print(f'I am the book, "{bookName}", ask me any question: ')
 while True:
     command = input("User Question>> ")
     response, response2 = ask_a_question(command)
-    print(f"\n\n I think the answer is : {response}\n Without extra context I think the answer is: {response2}")
+    print(f"\tAnswer from LLM with context : {response}")
+    print(f"\tAnswer from LLM no context   : {response2}")
 

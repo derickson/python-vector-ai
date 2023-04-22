@@ -4,8 +4,14 @@ from langchain.llms import HuggingFacePipeline
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, AutoModelForSeq2SeqLM, StoppingCriteria, StoppingCriteriaList
 import gc
+import os
 
-def show_cache(p=False):
+from lib_webLLM import WebLLM
+
+OPTION_CUDA_USE_GPU = os.getenv('OPTION_CUDA_USE_GPU', 'False') == "True"
+cache_dir = "../cache"
+
+def clean_cache(p=False):
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
@@ -25,9 +31,9 @@ def getStableLM3B():
     model_id = 'stabilityai/stablelm-tuned-alpha-3b'
     print(f">> Prep. Get {model_id} ready to go")
     tokenizer = AutoTokenizer.from_pretrained(model_id) 
-    show_cache()
-    model = AutoModelForCausalLM.from_pretrained(model_id) #load_in_8bit=True, device_map='auto'
-    show_cache()
+    clean_cache()
+    model = AutoModelForCausalLM.from_pretrained(model_id)
+    clean_cache()
     pipe = pipeline(
         "text-generation",
         model=model, 
@@ -42,14 +48,18 @@ def getStableLM3B():
 
 
 
-def getFlanXL():
+def getFlanLarge():
     
-    model_id = 'google/flan-t5-xl'
+    model_id = 'google/flan-t5-large'
     print(f">> Prep. Get {model_id} ready to go")
     # model_id = 'google/flan-t5-large'# go for a smaller model if you dont have the VRAM
     tokenizer = AutoTokenizer.from_pretrained(model_id) 
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map='auto') #load_in_8bit=True, device_map='auto'
-    model.cuda()
+    if OPTION_CUDA_USE_GPU:
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=cache_dir, load_in_8bit=True, device_map='auto') 
+            model.cuda()
+    else:
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=cache_dir) 
+    
     pipe = pipeline(
         "text2text-generation",
         model=model, 
@@ -59,26 +69,25 @@ def getFlanXL():
     llm = HuggingFacePipeline(pipeline=pipe)
     return llm
 
-# local_llm = getFlanXL()
-
-
 ## options are flan and stablelm
 MODEL = "flan"
 
 
-
 if MODEL == "flan":
-    local_llm = getFlanXL()
+    local_llm = getFlanLarge()
+elif MODEL == "webflan":
+    local_llm = WebLLM()
 else:
     local_llm = getStableLM3B()
 
 
 def make_the_llm():
-    if MODEL == "flan":
+    if MODEL == "flan"  or MODEL == "webflan":
         template_informed = """
-        I know: {context}
+        I am a helpful AI that answers questions. When I don't know the answer I say I don't know. 
+        I know context: {context}
         when asked: {question}
-        my response is: """
+        my response using only information in the context is: """
     else:
         stablelm_system_prompt = """
             - StableLM answers questions using only the information {context}
@@ -92,10 +101,8 @@ def make_the_llm():
 
 
 def make_the_llm_ignorant():
-    if MODEL == "flan":
-        template_ignorant = """
-        when asked: {question}
-        my response is: """
+    if MODEL == "flan" or MODEL == "webflan":
+        template_ignorant = "{question}"
     else:
         stablelm_system_prompt = """
             - StableLM answers questions 
