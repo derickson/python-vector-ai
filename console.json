@@ -1,0 +1,93 @@
+GET /_cat/indices/book*
+
+DELETE /book_wookieepedia_mpnet
+
+GET /book_wookieepedia_mpnet/_mapping
+
+GET /book_wookieepedia_mpnet/_search
+
+
+PUT /book_wookieepedia_mpnet
+{
+  "settings": {
+    "number_of_shards": 4
+  },
+  "mappings": {
+    "properties": {
+      "metadata": {
+        "type": "object"
+      },
+      "text": {
+        "type": "text"
+      },
+      "vector": {
+        "type": "dense_vector",
+        "dims": 768
+      }
+    }
+  }
+}
+
+GET _ml/trained_models/sentence-transformers__all-mpnet-base-v2/_stats
+
+
+DELETE _ingest/pipeline/sw-embeddings
+
+PUT _ingest/pipeline/sw-embeddings
+{
+  "description": "Text embedding pipeline",
+  "processors": [
+    {
+      "inference": {
+        "model_id": "sentence-transformers__all-mpnet-base-v2",
+        "target_field": "text_embedding",
+        "field_map": {
+          "text": "text_field"
+        }
+      }
+    },
+    {
+      "set":{
+        "field": "vector",
+        "copy_from": "text_embedding.predicted_value"
+      }
+    },
+    {
+      "remove": {
+        "field": "text_embedding"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+
+
+POST _ingest/pipeline/sw-embeddings/_simulate
+{
+  "docs": [
+    {
+      "_source": {
+        "text": "0-0-0, also known simply as Triple-Zero, or just Trip, was a protocol droid designed to specialize in etiquette, customs, translation and torture. He was awoken by Doctor Aphra and the Sith Lord Darth Vader, and proceeded to perform various missions for the two alongside his fellow droid and companion BT-1. After Aphra faked her own death, he and BT-1 continued to roam the galaxy with her.",
+        "metadata": {
+          "a": "b"
+        }
+      }
+    }
+  ]
+}
+
